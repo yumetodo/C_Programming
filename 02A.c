@@ -34,5 +34,6 @@ int main(void) {
   }
   
   printf("%d\n", max); /* 出力 */
+  
   return 0;
 }
