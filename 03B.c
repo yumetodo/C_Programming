@@ -4,6 +4,7 @@
 int strlen(char *s1);
 char *findhead(char *s1, char *s2);
 
+
 int main(void) {
   char s1[LEN + 2];
   char s2[LEN + 2];
