@@ -35,7 +35,7 @@ int main() {
     }
   }
   p->next = NULL;
-
+  
   listsort(list);
   for(p = list->next; p; p = p->next) {
     printf("%s", p->data.account);
@@ -49,12 +49,26 @@ int main() {
 
 
 void listsort(struct node *n) {
-  int i, j, minindex;
-  for(i = 1; i < 10; i += 1) {
-    minindex = i;
-    for(j = i + 1; j <= 10; j += 1) {
-      if(n->)
+  int i, j, sum, cmp;
+  struct node *l,*m, *minindex, *top = n;
+  sum = 0;
+  l = top->next;
+  m = l->next;
+  for(i = 0; i < 10; i += 1)
+    sum += l->data.score[i];
+  minindex = l;
+
+  while(m != NULL) {
+    cmp = 0;
+    for(i = 0; i < 10; i += 1)
+      cmp += l->data.score[i];
+    if(sum == cmp) {
+      if(strcmp(l->data.account, m->data.account) > 0) {
+        minindex = m;
+      }
     }
+    if(sum < cmp)
+      minindex = m;
   }
 
 }
