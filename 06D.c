@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <math.h>
-#define EPSILON /* 縺薙％繧貞ｮ夂ｾｩ */
+#define EPSILON /* 縺薙％繧貞ョ夂セゥ */
 
 double overlap(double x1, double y1, double x2, double y2);
 
