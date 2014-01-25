@@ -89,6 +89,7 @@ void LP_search(ListPlayer lp, char *buf) {
   /*
   Question B
   */
+
 }
 
 ListPlayer LP_addmusic(ListPlayer lp, elementtype music) {
@@ -132,7 +133,7 @@ void LP_play(ListPlayer lp, int b, int e) {
 ListPlayer LP_init() {
   ListPlayer lp;
   lp.n = 0/*LISTMAX - 1*/;
-  lp.music[0] = strdup(""); /* ”Ô•º */
+  lp.music[0] = strdup(""); /* ç•ªå…µ */
   return lp;
 }
 
