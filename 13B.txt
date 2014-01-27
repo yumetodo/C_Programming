@@ -1,0 +1,14 @@
+a song from japan
+can you hear me?
+boy meets girl
+cool hip hop
+best my friend
+.
+/b
+.
+
+##########
+$ gcc 13B.c
+$ ./a.out < 13B.txt
+best my friend
+boy meets girl
