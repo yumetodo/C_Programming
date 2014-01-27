@@ -85,40 +85,48 @@ int main() {
 }
 
 void LP_search(ListPlayer lp, char *buf) {
-  printf("LP_search : %s size %d\n", buf, (int)strlen(buf));
-  int i = 0, j = 0, k = 0;
-  char hit[1024], tmp;
-
-//  while(*buf != '\0') {
-    while(i < lp.n) {
-      while(j < 1024) {
-        if(lp.music[i][j] == *buf) {
-          j += 1;
-          buf += 1;
-          if(*buf == '\0') {
-            hit[k] = *lp.music[i];
-            k += 1;
-            break;
-          }
-        } else {
-          buf -= j;
-          j = 0;
-          break;
+//  printf("LP_search : %s\nsize: %d\n", buf, (int)strlen(buf));
+  int i, j, len;
+  char *top;
+  i = 0;
+  top = buf;
+ 
+  while(i <= lp.n) {
+    j = 0;
+    while(lp.music[i][j] != '\0') {
+      if(lp.music[i][j] == *buf) {
+        j += 1;
+        buf += 1;
+        if(*buf == '\0') {
+          printf("%s\n", lp.music[i]);
+          ;
         }
       }
-      i += 1;
-    }
-//  }
-  for(i = 0; i < k; i += 1) {
-    for(j = k; j >= i + 1; j -= 1) {
-      if(strcmp(hit[j], hit[j - 1]) < 0) {
-        tmp = hit[j];
-        hit[j] = hit[j - 1];
-        hit[j - 1] = tmp;
+      else {
+        buf = top;
+        break;
       }
     }
+    i += 1;
   }
 }
+  
+/*
+  int l, r, m;
+  l = 0;
+  r = lp.n - 1;
+*/
+/*
+  while(l < r) {
+    m = (l + r) / 2;
+    if(strcmp(*buf, lp.music[m]) < 0)
+      r = m - 1;
+    else if(strcmp(*buf, lp.music[m]) > 0)
+      l = m + 1;
+    else
+      l = r = m;
+  }
+*/
 
 ListPlayer LP_addmusic(ListPlayer lp, elementtype music) {
   int j;
@@ -139,10 +147,6 @@ ListPlayer LP_addmusic(ListPlayer lp, elementtype music) {
   
   lp.music[j] = music;
   lp.n += 1;
-  /**/
-//  for(j = 0; j < lp.n; j += 1)
-//  printf("music[%d] : %s\n", j, lp.music[j]);
-  /**/
 
   return lp;
 }
@@ -174,3 +178,4 @@ void chomp(char *buf, int n)  {
     }
   }
 }
+
