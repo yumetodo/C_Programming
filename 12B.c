@@ -38,7 +38,7 @@ void swap(recordtype *x, recordtype *y) {
 
 void pushdown(recordtype* b, int first, int last) {
   int r = first;
-  int k = r * 2;
+  int k = r * 2 + 1;
   while(k <= last) {
     if(k < last && b[k].n < b[k + 1].n)
       k += 1;
@@ -46,11 +46,11 @@ void pushdown(recordtype* b, int first, int last) {
       break;
     swap(&b[r], &b[k]);
     r = k;
-    k = r * 2;
+    k = r * 2 + 1;
   }
 }
 
-void heapsort(recordtype* r, int n) {
+void heapsort(recordtype *r, int n) {
   int i;
   for(i = n / 2 - 1; i >= 0; i -= 1)
     pushdown(r, i, n);
