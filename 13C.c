@@ -192,7 +192,7 @@ void LP_play(ListPlayer lp, int b, int e) {
 ListPlayer LP_init() {
   ListPlayer lp;
   lp.n = 0/*LISTMAX - 1*/;
-  lp.music[0] = strdup(""); /* $BHVJ<(B */
+  lp.music[0] = strdup(""); /* 番兵 */
   return lp;
 }
 
