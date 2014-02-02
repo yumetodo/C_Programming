@@ -1,0 +1,25 @@
+a song from japan
+boy meets girl
+cool hip hop
+dear my friend
+.
+p 2 4
+r 3 2
+m 2 4
+d 0 2
+q 0 0
+
+##########
+$ ./a.out < 10B.txt
+boy meets girl
+cool hip hop
+dear my friend
+cool hip hop
+boy meets girl
+a song from japan
+dear my friend
+cool hip hop
+boy meets girl
+a song from japan
+cool hip hop
+boy meets girl
