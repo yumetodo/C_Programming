@@ -66,8 +66,11 @@ void listsort(struct node *n) {
       if(strcmp(l->data.account, m->data.account) > 0) {
         minindex = m;
       }
+      else {
+        minindex = l;
+      }
     }
-    if(sum < cmp)
+    else if(sum < cmp)
       minindex = m;
   }
 
