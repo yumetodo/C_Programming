@@ -12,8 +12,8 @@ typedef struct {
 } ListPlayer;
 
 ListPlayer LP_init();
-ListPlayer LP_addmusic(ListPlayer lp, elementtype music);
-ListPlayer LP_addmusic_merge(ListPlayer lp, elementtype music);
+ListPlayer LP_addmusic_insertion(ListPlayer lp, elementtype music);
+ListPlayer LP_merge_sort(ListPlayer lp, int l, int r);
 void LP_play(ListPlayer lp, int b, int e);
 void LP_search(ListPlayer lp, char *buf);
 void chomp(char *buf, int n);
@@ -21,7 +21,7 @@ void chomp(char *buf, int n);
 int main() {
   ListPlayer myplayer;
   char *music;
-  int b, e, d, bi, ci;
+  int b, e, d, bi, ci, /* merge sort */i = 0;
   char buf[1024], cmdbuf[16], cmd;
 
   myplayer = LP_init();
@@ -32,19 +32,21 @@ int main() {
     if(buf[0] == '.')
       break;
     music = strdup(buf);
-    myplayer = LP_addmusic(myplayer, music);
+    myplayer = LP_addmusic_insertion(myplayer, music);
   }
-
+  i = myplayer.n + 1;
   while(1) {
     fgets(buf, sizeof(buf), stdin);
     chomp(buf, sizeof(buf));
     if(buf[0] == '.')
       break;
     music = strdup(buf);
-    myplayer = LP_addmusic_merge(myplayer, music);
+    myplayer.music[i] = music;
+    i += 1;
+    myplayer.n += 1;
   }
-
-
+  /* merge sort */
+  myplayer = LP_merge_sort(myplayer,1, myplayer.n);
   /* command parser */
   while(1){
     b = e = d = 0;
@@ -122,24 +124,7 @@ void LP_search(ListPlayer lp, char *buf) {
   }
 }
   
-/*
-  int l, r, m;
-  l = 0;
-  r = lp.n - 1;
-*/
-/*
-  while(l < r) {
-    m = (l + r) / 2;
-    if(strcmp(*buf, lp.music[m]) < 0)
-      r = m - 1;
-    else if(strcmp(*buf, lp.music[m]) > 0)
-      l = m + 1;
-    else
-      l = r = m;
-  }
-*/
-
-ListPlayer LP_addmusic(ListPlayer lp, elementtype music) {
+ListPlayer LP_addmusic_insertion(ListPlayer lp, elementtype music) {
   int j;
 
   if(lp.n >= LISTMAX)
@@ -162,11 +147,36 @@ ListPlayer LP_addmusic(ListPlayer lp, elementtype music) {
   return lp;
 }
 
-ListPlayer LP_addmusic_merge(ListPlayer lp, elementtype music) {
+ListPlayer LP_merge_sort(ListPlayer lp, int l, int r) {
+  int i, j, k, m;
+  ListPlayer mp, np;
+  mp = np = LP_init();
   
-
-  return lp;
+  if(l < r) {
+    m = (l + r) / 2;
+    LP_merge_sort(lp, l, m);
+    LP_merge_sort(lp, m + 1, r);
+    for(i = m; i >= l; i -= 1)
+      mp.music[i] = lp.music[i];
+    i = l;
+    for(j = m + 1; j <= r; j += 1)
+      mp.music[r + m + 1 - j] = lp.music[j];
+    j = r;
+    for(k = l; k <= r; k += 1) {
+      if(strcmp(mp.music[i], mp.music[j]) < 0)
+        np.music[k] = mp.music[i ++];
+      else
+        np.music[k] = mp.music[j --];
+    }
+  }
+  np.n = k - 1;
+//  for(i = 1; i <= lp.n; i += 1)
+//    printf("player[%d]: %s\n", i, lp.music[i]);
+//  printf("\n");
+  return np;
 }
+
+
 
 void LP_play(ListPlayer lp, int b, int e) {
   if(e < b)
@@ -182,7 +192,7 @@ void LP_play(ListPlayer lp, int b, int e) {
 ListPlayer LP_init() {
   ListPlayer lp;
   lp.n = 0/*LISTMAX - 1*/;
-  lp.music[0] = strdup(""); /* 番兵 */
+  lp.music[0] = strdup(""); /* $BHVJ<(B */
   return lp;
 }
 
