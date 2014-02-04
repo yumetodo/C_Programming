@@ -86,31 +86,14 @@ int main(void) {
     }
     else if(cmd == 'm') {
       if(lseek(music, cn1) != NULL && lseek(music, cn2) != NULL) {
-        position tmp1, tmp2;
-        /*
-         * a b c d e
-         *   |   |   
-         *   m   n    
-         *
-         */
         mn = lseek(music, cn1);
         nn = lseek(music, cn2);
-//        if(cn1 == 1)
-//        tmp1 = first(music);
-//        else
-          tmp1 = previous(music, mn);
-//        if(cn2 == 1)
-//          tmp2 = first(music);
-//        else
-          tmp2 = previous(music, nn);
-        tmp1->next = nn;
-        tmp2->next = mn;
-        /*
-         * a-b-c-d-e
-        */
-        tmp1 = nn->next;
-        nn->next = mn->next;
-        mn->next = tmp1;
+        /* Insert */
+        insert(music, previous(music, mn), retrieve(music, nn));
+        insert(music, previous(music, nn), retrieve(music, mn));
+        /* Delete */
+        delete(music, mn);
+        delete(music, nn);
       }
       printlist(music);
     }
@@ -118,9 +101,14 @@ int main(void) {
       break;
     }
   }
-//  printlist(music);
 
-  free(music);
+  position del, dnext;  /* free で開放するポインタ, その次のポインタ */
+  dnext = first(music);
+  while(dnext) {
+    del = dnext;
+    dnext = next(music, dnext);
+    free(del);
+  }
   return 0;
 }
 
