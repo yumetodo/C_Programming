@@ -102,7 +102,7 @@ int main(void) {
     }
   }
 
-  position del, dnext;  /* free で開放するポインタ, その次のポインタ */
+  position del, dnext;   /* free で開放するポインタ, その次のポインタ */
   dnext = first(music);
   while(dnext) {
     del = dnext;
