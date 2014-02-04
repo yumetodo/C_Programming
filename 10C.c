@@ -123,13 +123,14 @@ int main(void) {
   }
 //  printlist(music);
 
-  position p, q;
-  p = next(music, first(music));
-  while(p != music) {
-    q = p;
-    p = next(music, p);
-    free(p);
+  position del, dnext;
+  dnext = next(music, first(music));
+  while(dnext != first(music)) {
+    del = dnext;
+    dnext = next(music, dnext);
+    free(del);
   }
+  free(first(music));
 
   return 0;
 }
