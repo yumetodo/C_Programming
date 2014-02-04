@@ -24,23 +24,24 @@ int main(void) {
   music = initlist();
   
   while(1) {
-//    char *buf;
-//    buf = (char *)malloc(sizeof(char) * (MAXLENGTH + 2));
-//    if(buf == NULL) {
-//      printf("not allocated\n");
-//      exit(1);
-//    }
     char buf[MAXLENGTH + 2];
     fgets(buf, sizeof(buf), stdin);
     if(buf[0] == '.')
       break;
     insert(music, end(music), buf);
-//    free(buf);
   }
 
   printlist(music);
 
-  free(music);
+  position del, dnext;
+  dnext = first(music);
+
+  while(dnext) {
+    del = dnext;
+    dnext = next(music, dnext);
+    free(dnext);
+  }
+
   return 0;
 }
 
