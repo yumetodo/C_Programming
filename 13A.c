@@ -11,9 +11,16 @@
 typedef char * elementtype;
 
 typedef struct {
-  elementtype music[LISTMAX];
-  int n;
+	elementtype music[LISTMAX];
+	int n;
 } ListPlayer;
+typedef struct _CMD{
+	char cmd;
+	int play_begin;
+	int play_end;
+	int d;
+	char* search_string;
+}CMD;
 
 ListPlayer LP_init();
 ListPlayer LP_addmusic(ListPlayer lp, elementtype music);
@@ -52,10 +59,29 @@ char* new_string_getline_from_stdin2(size_t* numof_arrray, size_t* str_len, bool
 /// <returns>文字列が入った動的確保されたメモリー空間へのポインターを返します。NULLのときは最初のcallocに失敗しています</returns>
 char* new_string_getline(FILE* stream, size_t* numof_arrray, size_t* str_len, bool* iseof, bool* is_too_long_line);
 
-/*
-参考サイト
-http://web.archive.org/web/20040610164848/http://kitaj.at.infoseek.co.jp/getline.html
-*/
+/// <summary>文字列を解析してコマンドを実行する準備をする。</summary>
+/// <param name="in_str">変換するchar型文字列</param>
+/// <returns>CMD型の構造体を返します。in_strがNULLの時はすべての要素が0の状態で返却します。</returns>
+CMD command_parser(char* in_str);
+/// <summary>文字列をint型に変換する</summary>
+/// <param name="in_str">変換するchar型文字列</param>
+/// <param name="endptr">strtolが返す変換できなかった文字列の最初の要素へのポインター</param>
+/// <param name="first_skip">数字が出るまで読み飛ばすかどうか</param>
+/// <returns>その他:正常,-1:異常</returns>
+int parseInt(char const * in_str, char* endptr, bool first_skip);
+
+
+int parseInt(char const * in_str, char* endptr, bool first_skip){
+	long t;
+	unsigned int i;
+	if (first_skip) for (i = 0; '\0' != in_str[i] && 0 == isdigit(in_str[i]); i++);//first_skipがtrueなら数字が出るまで読み飛ばす。
+	errno = 0;
+	t = strtol(&in_str[i], &endptr, 10);
+	if (errno != 0 || in_str[0] == endptr[0] || t < INT_MIN || INT_MAX < t){
+		return -1;
+	}
+	return (int)t;
+}
 int istermination(char character){
 	if (EOF == character) return EOF;
 	if ('\n' == character || '\r' == character || '\0' == character) return true;
@@ -136,68 +162,61 @@ char* new_string_getline(FILE* stream, size_t* numof_arrray, size_t* str_len, bo
 	if (NULL != numof_arrray) *numof_arrray = numof_return_arrray;
 	return return_str;
 }
-int main() {
-  ListPlayer myplayer;
-  int b, e, d, bi, ci;
-  char buf[1024], cmdbuf[16], cmd;
+CMD command_parser(char* in_str){
+	CMD command = { 0 };
+	if (NULL == in_str) return command;
+	elementtype endptr1, endptr2;
 
-  myplayer = LP_init();
-
-  while(1) {
-	char *music = new_string_getline_from_stdin();
-	if (NULL == music) continue;
-	if ('.' == music[0]) break;
-    myplayer = LP_addmusic(myplayer, music);
-  }
-
-  /* command parser */
-  while(1){
-    b = e = d = 0;
-    fgets(buf, sizeof(buf), stdin);
-    bi = 0;
-    ci = 0;
-    while(isdigit(buf[bi])) {
-      cmdbuf[ci] = buf[bi];
-      bi += 1;
-      ci += 1;
-    }
-    cmdbuf[ci] = '\0';
-    b = atol(cmdbuf);
-    if(buf[bi] == ',') {
-      bi += 1;
-      ci = 0;
-      while(isdigit(buf[bi])) {
-        cmdbuf[ci] = buf[bi];
-        bi += 1;
-        ci += 1;
-      }
-      cmdbuf[ci] = '\0';
-      e = atol(cmdbuf);
-    }
-    cmd = buf[bi];
-    if(cmd != '/'){
-      bi += 1;
-      ci = 0;
-      while (isdigit(buf[bi])) {
-        cmdbuf[ci] = buf[bi];
-        bi += 1;
-        ci += 1;
-      }
-      cmdbuf[ci] = '\0';
-      d = atol(cmdbuf);
-    }
-    /* command execution */
-    if (cmd == 'p') {
-      LP_play(myplayer, b, e);
-    } else if (cmd == '/') {
-      chomp(&buf[bi + 1], sizeof(buf) - bi - 1);
-      LP_search(myplayer, &buf[bi + 1]);
-    } else if (cmd == '.') {
-      break;
-    }
-  }
-
-  return 0;
+	command.play_begin = parseInt(in_str, endptr1, false);
+	if (command.play_begin < 1) command.play_begin = 1;
+	if ('.' == endptr1[0]){
+		command.play_end = parseInt(endptr1, endptr2, true);
+		if (command.play_end < 1) command.play_end = 1;
+	}
+	else{
+		endptr2 = endptr1;
+	}
+	if ('/' != endptr2[0]){
+		command.d = parseInt(endptr2, NULL, true);
+		command.search_string = NULL;
+	}
+	else{
+		command.search_string = endptr2;
+	}
+	command.cmd = endptr2[0];
+	return command;
+}
+int main(void) {
+	ListPlayer myplayer = LP_init();
+	int b, e, d, bi, ci;
+	char buf[1024], cmdbuf[16];
+	
+	
+	while(1) {
+		char *music = new_string_getline_from_stdin();
+		if (NULL == music) continue;
+		if ('.' == music[0]) break;
+		myplayer = LP_addmusic(myplayer, music);
+	}
+	
+	/* command parser */
+	while(1){
+		b = e = d = 0;
+		char* cmd_buf = new_string_getline_from_stdin();
+		if (NULL == cmd_buf) continue;
+		CMD command = command_parser(cmd_buf);
+		const char cmd = command.cmd;
+		/* command execution */
+		if (cmd == 'p') {
+			LP_play(myplayer, command.play_begin, command.play_end);
+		} else if (cmd == '/') {
+			LP_search(myplayer, command.search_string);
+		} else if (cmd == '.') {
+			break;
+		}
+	}
+	
+	return 0;
 }
 
 void LP_search(ListPlayer lp, char *buf) {
@@ -209,41 +228,39 @@ void LP_search(ListPlayer lp, char *buf) {
 }
 
 ListPlayer LP_addmusic(ListPlayer lp, elementtype music) {
-  int j;
-
-  if(lp.n >= LISTMAX)
-    return lp;
-  
-  j = 1;
-  while(j <= lp.n) {
-    if(strcmp(lp.music[j], music) > 0) {
-      elementtype tmp;
-      tmp = lp.music[j];
-      lp.music[j] = music;
-      music = tmp;
-    }
-    j += 1;
-  }
-  
-  lp.music[j] = music;
-  lp.n += 1;
-  /**/
-//  for(j = 0; j < lp.n; j += 1)
-//  printf("music[%d] : %s\n", j, lp.music[j]);
-  /**/
-
-  return lp;
+	int j;
+	
+	if(lp.n >= LISTMAX)
+	  return lp;
+	
+	j = 1;
+	while(j <= lp.n) {
+	  if(strcmp(lp.music[j], music) > 0) {
+	    elementtype tmp;
+	    tmp = lp.music[j];
+	    lp.music[j] = music;
+	    music = tmp;
+	  }
+	  j += 1;
+	}
+	
+	lp.music[j] = music;
+	lp.n += 1;
+	//for(j = 0; j < lp.n; j += 1)
+	//printf("music[%d] : %s\n", j, lp.music[j]);
+	
+	return lp;
 }
 
-void LP_play(ListPlayer lp, int b, int e) {
-  if(e < b)
-    e = b;
-  int i = b;
-
-  while(i <= e) {
-    printf("%s\n", lp.music[i]);
-    i += 1;
-  }
+void LP_play(ListPlayer lp, int play_begin, int play_end) {
+	play_begin--;
+	play_end--;//配列は0から始まる
+	if(play_end < play_begin)
+	  play_end = play_begin;
+	int i = (play_begin < 0)? 0 : play_begin;
+	for (i = play_begin; i <= play_end; i++){
+		printf("%s\n", lp.music[i]);
+	}
 }
 
 ListPlayer LP_init() {
