@@ -68,16 +68,21 @@ CMD command_parser(char* in_str);
 /// <param name="endptr">strtolが返す変換できなかった文字列の最初の要素へのポインター</param>
 /// <param name="first_skip">数字が出るまで読み飛ばすかどうか</param>
 /// <returns>その他:正常,-1:異常</returns>
-int parseInt(char const * in_str, char* endptr, bool first_skip);
+int parseInt(char const * in_str, char** endptr, bool first_skip);
 
+/// <summary>コマンドを実行する。</summary>
+/// <param name="myplayer">ListPlayer型の楽曲データ</param>
+/// <param name="command">command_parserが解析したCMD型構造体へのポインター</param>
+/// <returns>true:cmd != '.' , false:cmd == '.'</returns>
+bool command_execution(ListPlayer myplayer, CMD* command);
 
-int parseInt(char const * in_str, char* endptr, bool first_skip){
+int parseInt(char const * in_str, char** endptr, bool first_skip){
 	long t;
 	unsigned int i;
 	if (first_skip) for (i = 0; '\0' != in_str[i] && 0 == isdigit(in_str[i]); i++);//first_skipがtrueなら数字が出るまで読み飛ばす。
 	errno = 0;
-	t = strtol(&in_str[i], &endptr, 10);
-	if (errno != 0 || in_str[0] == endptr[0] || t < INT_MIN || INT_MAX < t){
+	t = strtol(&in_str[i], endptr, 10);
+	if (errno != 0 || in_str[0] == *endptr[0] || t < INT_MIN || INT_MAX < t){
 		return -1;
 	}
 	return (int)t;
@@ -165,12 +170,12 @@ char* new_string_getline(FILE* stream, size_t* numof_arrray, size_t* str_len, bo
 CMD command_parser(char* in_str){
 	CMD command = { 0 };
 	if (NULL == in_str) return command;
-	elementtype endptr1, endptr2;
-
-	command.play_begin = parseInt(in_str, endptr1, false);
+	char* endptr1;
+	char* endptr2;
+	command.play_begin = parseInt(in_str, &endptr1, false);
 	if (command.play_begin < 1) command.play_begin = 1;
 	if ('.' == endptr1[0]){
-		command.play_end = parseInt(endptr1, endptr2, true);
+		command.play_end = parseInt(endptr1, &endptr2, true);
 		if (command.play_end < 1) command.play_end = 1;
 	}
 	else{
@@ -186,11 +191,23 @@ CMD command_parser(char* in_str){
 	command.cmd = endptr2[0];
 	return command;
 }
+bool command_execution(ListPlayer myplayer, CMD* command){
+	bool judge_continue_or_break = true;
+	const char cmd = command->cmd;
+	/* command execution */
+	if (cmd == 'p') {
+		LP_play(myplayer, command->play_begin, command->play_end);
+	}
+	else if (cmd == '/') {
+		LP_search(myplayer, command->search_string);
+	}
+	else if (cmd == '.') {
+		judge_continue_or_break = false;
+	}
+	return judge_continue_or_break;
+}
 int main(void) {
-	ListPlayer myplayer = LP_init();
-	int b, e, d, bi, ci;
-	char buf[1024], cmdbuf[16];
-	
+	ListPlayer myplayer = LP_init();	
 	
 	while(1) {
 		char *music = new_string_getline_from_stdin();
@@ -200,20 +217,13 @@ int main(void) {
 	}
 	
 	/* command parser */
-	while(1){
-		b = e = d = 0;
+	bool judge_continue_or_break = true;
+	while (judge_continue_or_break){
 		char* cmd_buf = new_string_getline_from_stdin();
 		if (NULL == cmd_buf) continue;
-		CMD command = command_parser(cmd_buf);
-		const char cmd = command.cmd;
-		/* command execution */
-		if (cmd == 'p') {
-			LP_play(myplayer, command.play_begin, command.play_end);
-		} else if (cmd == '/') {
-			LP_search(myplayer, command.search_string);
-		} else if (cmd == '.') {
-			break;
-		}
+		CMD command = command_parser(cmd_buf);//コマンド解析
+		judge_continue_or_break = command_execution(myplayer, &command);//コマンド実行
+		free(cmd_buf);//command.search_stringも開放される
 	}
 	
 	return 0;
@@ -234,14 +244,13 @@ ListPlayer LP_addmusic(ListPlayer lp, elementtype music) {
 	  return lp;
 	
 	j = 1;
-	while(j <= lp.n) {
+	for(j = 1; j <= lp.n; j++){//挿入ソート
 	  if(strcmp(lp.music[j], music) > 0) {
 	    elementtype tmp;
 	    tmp = lp.music[j];
 	    lp.music[j] = music;
 	    music = tmp;
 	  }
-	  j += 1;
 	}
 	
 	lp.music[j] = music;
