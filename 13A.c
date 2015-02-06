@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdbool.h>
+#include <limits.h>//in gcc
+#include <errno.h>//in gcc
+
 #define LISTMAX 1000
 
 typedef char * elementtype;
@@ -16,21 +20,133 @@ ListPlayer LP_addmusic(ListPlayer lp, elementtype music);
 void LP_play(ListPlayer lp, int b, int e);
 void LP_search(ListPlayer lp, char *buf);
 void chomp(char *buf, int n);
+/// <summary>終端文字を検出します。</summary>
+/// <param name="character">判定する文字を指定します。</param>
+/// <returns>EOFならEOF,\n\r\0はtrue,それ以外はfalseを返します。</returns>
+int istermination(char character);
 
+/// <summary>行の終わりまで空読みします。終端はistermination関数が判定します。</summary>
+/// <param name="stream">ファイルポインタやstdinなどを指定します。</param>
+/// <returns>EOFならEOF,それ以外は0を返します。</returns>
+/// <seealso cref = "istermination" / >
+int ignore_rest_of_line(FILE* stream);
+
+/// <summary>標準入力から文字列を読み取ります。使用後はfreeが必要です。</summary>
+/// <returns>文字列が入った動的確保されたメモリー空間へのポインターを返します。NULLのときは最初のcallocに失敗しています</returns>
+char* new_string_getline_from_stdin(void);
+
+/// <summary>標準入力から文字列を読み取ります。使用後はfreeが必要です。</summary>
+/// <param name="numof_arrray">NULLではない場合は、最終的に確保された配列の要素数を返します</param>
+/// <param name="str_len">NULLではない場合は、読み込んだ文字数を返します</param>
+/// <param name="iseof">NULLではない場合は、EOFに遭遇したらtrue,それ以外はfalseを返します。</param>
+/// <param name="str_len">NULLではない場合は、reallocに失敗したか、一行が4,194,311文字以上の文字列に遭遇するとtrue,それ以外はfalseを返します。</param>
+/// <returns>文字列が入った動的確保されたメモリー空間へのポインターを返します。NULLのときは最初のcallocに失敗しています</returns>
+char* new_string_getline_from_stdin2(size_t* numof_arrray, size_t* str_len, bool* iseof, bool* is_too_long_line);
+
+/// <summary>標準入力やファイルストリームなどから文字列を読み取ります。使用後はfreeが必要です。</summary>
+/// <param name="stream">ファイルポインタやstdinなどを指定します。</param>
+/// <param name="numof_arrray">NULLではない場合は、最終的に確保された配列の要素数を返します</param>
+/// <param name="str_len">NULLではない場合は、読み込んだ文字数を返します</param>
+/// <param name="iseof">NULLではない場合は、EOFに遭遇したらtrue,それ以外はfalseを返します。</param>
+/// <param name="str_len">NULLではない場合は、reallocに失敗したか、一行が4,194,311文字以上の文字列に遭遇するとtrue,それ以外はfalseを返します。</param>
+/// <returns>文字列が入った動的確保されたメモリー空間へのポインターを返します。NULLのときは最初のcallocに失敗しています</returns>
+char* new_string_getline(FILE* stream, size_t* numof_arrray, size_t* str_len, bool* iseof, bool* is_too_long_line);
+
+/*
+参考サイト
+http://web.archive.org/web/20040610164848/http://kitaj.at.infoseek.co.jp/getline.html
+*/
+int istermination(char character){
+	if (EOF == character) return EOF;
+	if ('\n' == character || '\r' == character || '\0' == character) return true;
+	return false;
+}
+int ignore_rest_of_line(FILE* stream){
+	char buf;
+	int temp;
+	do{
+		buf = fgetc(stream);
+	} while (false == (temp = istermination(buf)));
+	if (EOF == temp){
+		ungetc(buf, stream);//feofでEOF判定できるように
+		return EOF;
+	}
+	return 0;
+}
+char* new_string_getline_from_stdin(void){
+	bool is_too_long_line;
+	char* return_str = new_string_getline(stdin, NULL, NULL, NULL, &is_too_long_line);
+	if (NULL == return_str || is_too_long_line){
+		free(return_str);
+		return NULL;
+	}
+	return return_str;
+}
+char* new_string_getline_from_stdin2(size_t* numof_arrray, size_t* str_len, bool* iseof, bool* is_too_long_line){
+	return new_string_getline(stdin, numof_arrray, str_len, iseof, is_too_long_line);
+}
+char* new_string_getline(FILE* stream, size_t* numof_arrray, size_t* str_len, bool* iseof, bool* is_too_long_line){
+	/*
+	戻り値：文字列が入った動的確保されたメモリー空間へのポインター
+	エラー
+	戻り値がNULL：最初のcallocに失敗
+	iseofがtrue：EOFに遭遇（戻り値はEOFまでの文字列）
+	is_too_long_line：reallocに失敗したか、一行が4,194,311文字以上の文字列に遭遇
+	*/
+	const size_t lim_len = 4194304 + 7;//コマンドプロンプトの最大長は8191、CentOS6では2621440、無限ループ防止
+	const size_t numof_allocated_array_at_a_time = 10;//10個づつ確保する
+	size_t i = 0, j, numof_return_arrray = numof_allocated_array_at_a_time;
+	if (NULL != iseof) *iseof = false;
+	if (NULL != is_too_long_line) *is_too_long_line = false;
+	char* return_str = (char*)calloc(numof_allocated_array_at_a_time, sizeof(char));
+	if (NULL == return_str) return NULL;
+
+	char buf1;
+	char* buf;
+	int temp_eof;
+	do{
+		for (j = 0; i < lim_len && j < numof_allocated_array_at_a_time; i++, j++){
+			buf1 = fgetc(stream);//バッファに一文字読み込む
+			if (false != (temp_eof = istermination(buf1))){//do-whileループを抜けるか判定
+				if (EOF == temp_eof){
+					ungetc(buf1, stream);//feofでEOF判定できるように
+					if (NULL != iseof) *iseof = true;
+				}
+				memset(&return_str[i], '\0', numof_allocated_array_at_a_time - j);
+				break;//まずfor文を抜ける
+			}
+			return_str[i] = buf1;//バッファから、返却する文字列に、コピー
+		}
+		if (NULL != str_len) str_len[0] = i;
+		if (temp_eof) break;//do-whileループを抜ける
+		const size_t temp = numof_return_arrray + numof_allocated_array_at_a_time;
+		if (temp < lim_len && NULL != (buf = (char*)realloc(return_str, temp * sizeof(char)))){
+			return_str = buf;//正常処理
+			numof_return_arrray = temp;
+			return_str[numof_return_arrray - 1] = '\0';//予防措置。デバッガーで文字が追えるように
+		}
+		else{
+			if (NULL != is_too_long_line) *is_too_long_line = true;
+			return_str[numof_return_arrray - 1] = '\0';//読み込み済みの最後の一字を消す
+			if (NULL != str_len) str_len[0]--;//文字数も減る
+			if (EOF == ignore_rest_of_line(stream) && NULL != iseof) *iseof = true;
+			break;//do-whileループを抜ける
+		}
+	} while (i < lim_len);
+	if (NULL != numof_arrray) *numof_arrray = numof_return_arrray;
+	return return_str;
+}
 int main() {
   ListPlayer myplayer;
-  char *music;
   int b, e, d, bi, ci;
   char buf[1024], cmdbuf[16], cmd;
 
   myplayer = LP_init();
 
   while(1) {
-    fgets(buf, sizeof(buf), stdin);
-    chomp(buf, sizeof(buf));
-    if(buf[0] == '.')
-      break;
-    music = strdup(buf);
+	char *music = new_string_getline_from_stdin();
+	if (NULL == music) continue;
+	if ('.' == music[0]) break;
     myplayer = LP_addmusic(myplayer, music);
   }
 
@@ -133,7 +249,6 @@ void LP_play(ListPlayer lp, int b, int e) {
 ListPlayer LP_init() {
   ListPlayer lp;
   lp.n = 0/*LISTMAX - 1*/;
-  lp.music[0] = strdup(""); /* 番兵 */
   return lp;
 }
 
